@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>慢速壘球 - iPhone 12 Pro 單頁版</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: #121212;
+            color: #e0e0e0;
+            padding: calc(6px + env(safe-area-inset-top)) 8px calc(8px + env(safe-area-inset-bottom)) 8px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            max-width: 390px; /* iPhone 12 Pro 最佳螢幕寬度 */
+            margin: 0 auto;
+            height: 100vh;
+            overflow: hidden; /* 鎖定單頁畫面 */
+        }
+
+        /* 卡片共用結構 */
+        .card {
+            background: #1e1e1e;
+            border-radius: 8px;
+            padding: 6px 8px;
+            display: flex;
+            flex-direction: column;
+            border: 1px solid #333;
+        }
+
+        .card-title {
+            font-size: 0.8rem;
+            font-weight: bold;
+            color: #ff9f1c;
+            margin-bottom: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* 球員名冊區（微型化） */
+        .roster-card {
+            flex-shrink: 0;
+        }
+
+        .roster-input-group {
+            display: flex;
+            gap: 4px;
+            margin-bottom: 4px;
+        }
+
+        .roster-input-group input {
+            background: #2a2a2a;
+            border: 1px solid #444;
+            color: white;
+            padding: 4px 6px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            outline: none;
+        }
+        .num-input { width: 45px; text-align: center; }
+        .name-input { flex: 1; }
+
+        .btn-add {
+            background-color: #2ec4b6;
+            color: #000;
+            border: none;
+            border-radius: 6px;
+            padding: 4px 8px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .roster-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            border: 1px dashed #444;
+            border-radius: 6px;
+            padding: 4px;
+            background: #181818;
+            max-height: 80px;
+            overflow-y: auto;
+        }
+
+        .drag-player {
+            background: #2ec4b6;
+            color: #000;
+            font-weight: bold;
+            padding: 3px 6px;
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 0.75rem;
+        }
+        .drag-player .p-info { cursor: pointer; }
+        .btn-edit { background-color: #ff9f1c; color: #000; padding: 1px 4px; font-size: 0.65rem; border-radius: 3px; border: none; }
+        .btn-del { background-color: #e71d36; color: #fff; padding: 1px 4px; font-size: 0.65rem; border-radius: 3px; border: none; }
+
+        /* 先發 11 人主區塊 */
+        .lineup-card {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-height: 0; /* 讓內部可伸縮 */
+        }
+
+        .table-wrapper {
+            flex: 1;
+            overflow-y: auto;
+            border-radius: 6px;
+        }
+
+        .lineup-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.8rem;
+        }
+        .lineup-table th, .lineup-table td {
+            padding: 4px 2px;
+            text-align: center;
+            border-bottom: 1px solid #2a2a2a;
+        }
+        .lineup-table th { background: #2a2a2a; color: #aaa; font-size: 0.75rem; position: sticky; top: 0; z-index: 10; }
+
+        .drop-zone {
+            background: #2a2a2a;
+            border: 1px dashed #555;
+            border-radius: 5px;
+            height: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 6px;
+            color: #666;
+            font-size: 0.75rem;
+        }
+        .drop-zone .filled-player {
+            color: #ff9f1c;
+            font-weight: bold;
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.8rem;
+        }
+        .remove-btn {
+            color: #e71d36;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 1rem;
+            padding: 0 2px;
+        }
+
+        select {
+            background: #2a2a2a;
+            color: white;
+            border: 1px solid #444;
+            padding: 3px 2px;
+            border-radius: 5px;
+            width: 100%;
+            font-size: 0.78rem;
+        }
+
+        /* 底部功能鈕 */
+        .bottom-actions {
+            display: flex;
+            gap: 6px;
+            margin-top: 6px;
+        }
+        .btn-copy { 
+            flex: 2;
+            background-color: #0077b6; 
+            color: #fff; 
+            padding: 8px; 
+            font-size: 0.85rem; 
+            border-radius: 6px;
+            border: none;
+            font-weight: bold;
+        }
+        .btn-save {
+            flex: 1;
+            background-color: #e71d36;
+            color: #fff;
+            padding: 8px;
+            font-size: 0.85rem;
+            border-radius: 6px;
+            border: none;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+<!-- 1. 名冊區（縮小化） -->
+<div class="card roster-card">
+    <div class="card-title">
+        <span>可用名冊 (<span id="rosterCount">0</span>人)</span>
+        <span style="color:#888; font-size:0.68rem;">點擊姓名放入先發</span>
+    </div>
+    
+    <div class="roster-input-group">
+        <input type="number" id="newNum" class="num-input" placeholder="背號">
+        <input type="text" id="newName" class="name-input" placeholder="姓名">
+        <button class="btn-add" onclick="addPlayer()">新增</button>
+    </div>
+
+    <div class="roster-container" id="rosterList">
+        <!-- 動態球員名單 -->
+    </div>
+</div>
+
+<!-- 2. 先發 11 人主要區塊 -->
+<div class="card lineup-card">
+    <div class="card-title">
+        <span>先發 11 人陣容排定</span>
+    </div>
+    <div class="table-wrapper">
+        <table class="lineup-table">
+            <thead>
+                <tr>
+                    <th style="width: 10%;">棒</th>
+                    <th style="width: 53%;">選取球員</th>
+                    <th style="width: 37%;">守備位置</th>
+                </tr>
+            </thead>
+            <tbody id="lineupBody">
+                <!-- 動態生成 11 棒次 -->
+            </tbody>
+        </table>
+    </div>
+    
+    <div class="bottom-actions">
+        <button class="btn-save" onclick="saveRosterToStorage()">💾 儲存名冊</button>
+        <button class="btn-copy" onclick="copyLineup()">📋 複製陣容 (至 LINE)</button>
+    </div>
+</div>
+
+<script>
+    const defaultRoster = [
+        { id: '1', num: '26', name: '李宗霖' },
+        { id: '2', num: '5',  name: '林宜佑' },
+        { id: '3', num: '63', name: '許智超' },
+        { id: '4', num: '45', name: '陳志勇' },
+        { id: '5', num: '14', name: '張禹捻' },
+        { id: '6', num: '32', name: '錢明慶' },
+        { id: '7', num: '25', name: '陳明詮' },
+        { id: '8', num: '15', name: '陳煥文' },
+        { id: '9', num: '22', name: '劉生生' },
+        { id: '10', num: '13', name: '高嘉謙' },
+        { id: '11', num: '24', name: '佐佐木' },
+        { id: '12', num: '12', name: '楊文濱' },
+        { id: '13', num: '55', name: '蘇志偉' }
+    ];
+
+    const positions = [
+        { code: 'P',  name: '投手 (P)' },
+        { code: 'C',  name: '捕手 (C)' },
+        { code: '1B', name: '一壘 (1B)' },
+        { code: '2B', name: '二壘 (2B)' },
+        { code: '3B', name: '三壘 (3B)' },
+        { code: 'SS', name: '游擊 (SS)' },
+        { code: 'SF', name: '自由 (SF)' },
+        { code: 'LF', name: '左外 (LF)' },
+        { code: 'CF', name: '中外 (CF)' },
+        { code: 'RF', name: '右外 (RF)' },
+        { code: 'EP', name: '指定 (EP)' }
+    ];
+
+    let roster = [];
+    let lineup = new Array(11).fill(null);
+    let currentPositions = []; // 儲存當前 11 個棒次的守備位置選擇
+
+    function loadRoster() {
+        try {
+            const savedData = localStorage.getItem('softball_roster_single_page');
+            if (savedData) {
+                roster = JSON.parse(savedData);
+                return;
+            }
+        } catch (e) {
+            console.warn("Storage restricted, fallback to default roster.");
+        }
+        roster = JSON.parse(JSON.stringify(defaultRoster));
+    }
+
+    function saveRosterToStorage() {
+        try {
+            localStorage.setItem('softball_roster_single_page', JSON.stringify(roster));
+            alert('💾 名冊已成功儲存！');
+        } catch (e) {
+            alert('⚠️ 受限於瀏覽器存取權限，僅供本次作業階段使用。');
+        }
+    }
+
+    window.onload = function() {
+        loadRoster();
+        // 初始化預設守備位置
+        currentPositions = positions.map(p => p.code);
+        initLineupTable();
+        renderRoster();
+    };
+
+    function renderRoster() {
+        const rosterList = document.getElementById('rosterList');
+        if (!rosterList) return;
+        rosterList.innerHTML = '';
+
+        const usedIds = lineup.filter(p => p !== null).map(p => p.id);
+        const availableRoster = roster.filter(p => !usedIds.includes(p.id));
+
+        document.getElementById('rosterCount').innerText = availableRoster.length;
+
+        availableRoster.forEach(p => {
+            const div = document.createElement('div');
+            div.className = 'drag-player';
+            
+            div.innerHTML = `
+                <span class="p-info" onclick="quickSelectPlayer('${p.id}')">#${p.num} ${p.name}</span>
+                <div>
+                    <button class="btn-edit" onclick="editPlayer('${p.id}')">改</button>
+                    <button class="btn-del" onclick="deletePlayer('${p.id}')">刪</button>
+                </div>
+            `;
+            rosterList.appendChild(div);
+        });
+    }
+
+    function initLineupTable() {
+        const tbody = document.getElementById('lineupBody');
+        if (!tbody) return;
+        tbody.innerHTML = '';
+
+        for (let i = 0; i < 11; i++) {
+            const tr = document.createElement('tr');
+
+            tr.innerHTML = `
+                <td><b>${i + 1}</b></td>
+                <td>
+                    <div class="drop-zone" id="zone-${i}">
+                        <span class="placeholder">點擊名冊加入</span>
+                    </div>
+                </td>
+                <td>
+                    <select class="player-pos" id="pos-select-${i}" onchange="handlePositionChange(${i}, this.value)">
+                        ${positions.map(p => `<option value="${p.code}" ${p.code === currentPositions[i] ? 'selected' : ''}>${p.name}</option>`).join('')}
+                    </select>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        }
+    }
+
+    /* 守備位置自動對換功能 */
+    function handlePositionChange(changedIndex, newPosCode) {
+        const oldPosCode = currentPositions[changedIndex];
+
+        // EP (指定打擊) 不自動交換，可重複選取
+        if (newPosCode !== 'EP') {
+            // 尋找是否有其他棒次選取了相同的守備位置
+            const targetIndex = currentPositions.findIndex((pos, idx) => idx !== changedIndex && pos === newPosCode);
+
+            if (targetIndex !== -1) {
+                // 將對方位置改為當前棒次的舊位置
+                currentPositions[targetIndex] = oldPosCode;
+                const targetSelect = document.getElementById(`pos-select-${targetIndex}`);
+                if (targetSelect) {
+                    targetSelect.value = oldPosCode;
+                }
+            }
+        }
+
+        currentPositions[changedIndex] = newPosCode;
+    }
+
+    function quickSelectPlayer(id) {
+        const firstEmptyIdx = lineup.findIndex(p => p === null);
+        if (firstEmptyIdx === -1) {
+            alert('先發 11 人已滿！');
+            return;
+        }
+
+        const player = roster.find(p => p.id === id);
+        if (player) {
+            lineup[firstEmptyIdx] = player;
+            renderLineup();
+            renderRoster();
+        }
+    }
+
+    function removeFromLineup(index) {
+        lineup[index] = null;
+        renderLineup();
+        renderRoster();
+    }
+
+    function renderLineup() {
+        for (let i = 0; i < 11; i++) {
+            const zone = document.getElementById(`zone-${i}`);
+            const player = lineup[i];
+
+            if (player) {
+                zone.innerHTML = `
+                    <div class="filled-player">
+                        <span>#${player.num} ${player.name}</span>
+                        <span class="remove-btn" onclick="removeFromLineup(${i})">✕</span>
+                    </div>
+                `;
+            } else {
+                zone.innerHTML = `<span class="placeholder">點擊名冊加入</span>`;
+            }
+        }
+    }
+
+    function addPlayer() {
+        const numInput = document.getElementById('newNum');
+        const nameInput = document.getElementById('newName');
+        const num = numInput.value.trim();
+        const name = nameInput.value.trim();
+
+        if (!name) {
+            alert('請輸入姓名');
+            return;
+        }
+
+        const newPlayer = {
+            id: Date.now().toString(),
+            num: num || '00',
+            name: name
+        };
+
+        roster.push(newPlayer);
+        numInput.value = '';
+        nameInput.value = '';
+
+        renderRoster();
+    }
+
+    function editPlayer(id) {
+        const p = roster.find(item => item.id === id);
+        if (!p) return;
+
+        const newNum = prompt('背號：', p.num);
+        if (newNum === null) return;
+        const newName = prompt('姓名：', p.name);
+        if (newName === null) return;
+
+        if (newName.trim() !== '') {
+            p.num = newNum.trim();
+            p.name = newName.trim();
+
+            const lineupIdx = lineup.findIndex(item => item && item.id === id);
+            if (lineupIdx !== -1) lineup[lineupIdx] = p;
+
+            renderRoster();
+            renderLineup();
+        }
+    }
+
+    function deletePlayer(id) {
+        const p = roster.find(item => item.id === id);
+        if (p && confirm(`確定刪除 #${p.num} ${p.name} 嗎？`)) {
+            roster = roster.filter(item => item.id !== id);
+            const lineupIdx = lineup.findIndex(item => item && item.id === id);
+            if (lineupIdx !== -1) lineup[lineupIdx] = null;
+
+            renderRoster();
+            renderLineup();
+        }
+    }
+
+    function copyLineup() {
+        let text = "⚾ 今日先發 11 人打擊順序 ⚾\n------------------------\n";
+        let count = 0;
+
+        lineup.forEach((player, index) => {
+            const playerStr = player ? `#${player.num} ${player.name}` : '未排定';
+            const selectElem = document.getElementById(`pos-select-${index}`);
+            const posStr = selectElem ? selectElem.options[selectElem.selectedIndex].text : '';
+            
+            text += `第 ${index + 1} 棒 | ${playerStr} (${posStr})\n`;
+            if (player) count++;
+        });
+
+        if (count === 0 && !confirm('陣容尚未填寫，確定複製嗎？')) return;
+
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).then(() => {
+                alert('📋 已複製陣容表！可直接貼至 LINE 群組。');
+            }).catch(() => {
+                prompt('請手動複製以下內容：', text);
+            });
+        } else {
+            prompt('請手動複製以下內容：', text);
+        }
+    }
+</script>
+
+</body>
+</html>
